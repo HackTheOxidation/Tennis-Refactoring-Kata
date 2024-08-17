@@ -1,76 +1,95 @@
-
 public class TennisGame1 implements TennisGame {
     
-    private int m_score1 = 0;
-    private int m_score2 = 0;
-    private String player1Name;
-    private String player2Name;
+    private final Player player1;
+    private final Player player2;
+
+    public enum TennisScore {
+        Love,
+        Fifteen,
+        Thirty,
+        Forty,
+        Advantage,
+        Win
+    }
+
+    public static class Player {
+        private TennisScore score = TennisScore.Love;
+        private final String name;
+
+        public Player(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public TennisScore getScore() {
+            return score;
+        }
+
+        public void incScore(Player other) {
+            this.score = switch (this.score) {
+                case Love -> TennisScore.Fifteen;
+                case Fifteen -> TennisScore.Thirty;
+                case Thirty -> TennisScore.Forty;
+                case Forty ->
+                    switch (other.getScore()) {
+                        case Forty -> TennisScore.Advantage;
+                        case Advantage -> {
+                            other.score = TennisScore.Forty;
+                            yield TennisScore.Forty;
+                        }
+                        default -> TennisScore.Win;
+                    };
+                case Advantage, Win -> TennisScore.Win;
+            };
+        }
+
+        public Player compare(Player other) {
+            if (this.getScore() == other.getScore()) return null;
+            return this.getScore().ordinal() > other.getScore().ordinal() ? this : other;
+        }
+
+        public static boolean isWin(Player p1, Player p2) {
+            return p1.getScore() == TennisScore.Win || p2.getScore() == TennisScore.Win;
+        }
+    }
 
     public TennisGame1(String player1Name, String player2Name) {
-        this.player1Name = player1Name;
-        this.player2Name = player2Name;
+        this.player1 = new Player(player1Name);
+        this.player2 = new Player(player2Name);
     }
 
     public void wonPoint(String playerName) {
-        if (playerName == "player1")
-            m_score1 += 1;
+        if (playerName.equals(player1.getName()))
+            player1.incScore(player2);
         else
-            m_score2 += 1;
+            player2.incScore(player1);
+    }
+
+    private String getScoreForTie(TennisScore score) {
+        return switch (score.ordinal()) {
+            case 0, 1, 2  -> score + "-All";
+            default -> "Deuce";
+        };
+    }
+
+    private boolean isInFinalStage() {
+        return player1.getScore().ordinal() >= TennisScore.Forty.ordinal()
+                && player2.getScore().ordinal() >= TennisScore.Forty.ordinal();
     }
 
     public String getScore() {
-        String score = "";
-        int tempScore=0;
-        if (m_score1==m_score2)
-        {
-            switch (m_score1)
-            {
-                case 0:
-                        score = "Love-All";
-                    break;
-                case 1:
-                        score = "Fifteen-All";
-                    break;
-                case 2:
-                        score = "Thirty-All";
-                    break;
-                default:
-                        score = "Deuce";
-                    break;
-                
-            }
+        Player bestPlayer = player1.compare(player2);
+        if (bestPlayer == null) {
+            return getScoreForTie(player1.getScore());
+        } else if (Player.isWin(player1, player2)) {
+            return "Win for " + bestPlayer.getName();
+        } else if (isInFinalStage()) {
+            return "Advantage " + bestPlayer.getName();
+        } else {
+            return player1.getScore().toString() + "-" + player2.getScore().toString();
         }
-        else if (m_score1>=4 || m_score2>=4)
-        {
-            int minusResult = m_score1-m_score2;
-            if (minusResult==1) score ="Advantage player1";
-            else if (minusResult ==-1) score ="Advantage player2";
-            else if (minusResult>=2) score = "Win for player1";
-            else score ="Win for player2";
-        }
-        else
-        {
-            for (int i=1; i<3; i++)
-            {
-                if (i==1) tempScore = m_score1;
-                else { score+="-"; tempScore = m_score2;}
-                switch(tempScore)
-                {
-                    case 0:
-                        score+="Love";
-                        break;
-                    case 1:
-                        score+="Fifteen";
-                        break;
-                    case 2:
-                        score+="Thirty";
-                        break;
-                    case 3:
-                        score+="Forty";
-                        break;
-                }
-            }
-        }
-        return score;
     }
 }
